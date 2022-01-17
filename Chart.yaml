@@ -1,0 +1,12 @@
+apiVersion: v2
+name: yogstation-argocd
+description: Yogstation ArgoCD Deployment
+
+type: application
+
+version: 0.0.1
+
+dependencies:
+  - name: argo-cd
+    version: 3.30.0
+    repository: https://argoproj.github.io/argo-helm

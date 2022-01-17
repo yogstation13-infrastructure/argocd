@@ -1,0 +1,78 @@
+redis-ha:
+  enabled: false
+
+argo-cd:
+  createAggregateRoles: true
+
+  global:
+    networkPolicy:
+      create: true
+      defaultDenyIngress: true
+
+  repoServer:
+    env:
+      - name: HELM_PLUGINS
+        value: /custom-tools/helm-plugins/
+      - name: HELM_SECRETS_SOPS_PATH
+        value: /custom-tools/sops
+      - name: HELM_SECRETS_KUBECTL_PATH
+        value: /custom-tools/kubectl
+    volumes:
+      - name: custom-tools
+        emptyDir: { }
+    volumeMounts:
+      - mountPath: /custom-tools
+        name: custom-tools
+    initContainers:
+      - name: download-tools
+        image: alpine:latest
+        command: [ sh, -ec ]
+        env:
+          - name: HELM_SECRETS_VERSION
+            value: "3.11.0"
+          - name: SOPS_VERSION
+            value: "3.7.1"
+          - name: KUBECTL_VERSION
+            value: "1.22.0"
+        args:
+          - |
+            mkdir -p /custom-tools/helm-plugins
+            wget -qO- https://github.com/jkroepke/helm-secrets/releases/download/v${HELM_SECRETS_VERSION}/helm-secrets.tar.gz | tar -C /custom-tools/helm-plugins -xzf-;
+
+            wget -qO /custom-tools/sops https://github.com/mozilla/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux
+            wget -qO /custom-tools/kubectl https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl
+
+            chmod +x /custom-tools/*
+        volumeMounts:
+          - mountPath: /custom-tools
+            name: custom-tools
+
+  server:
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      hosts: ["argocd.yogstation.net"]
+      tls:
+        - hosts:
+            - argocd.yogstation.net
+          secretName: argocd-cert
+    extraArgs:
+      - "--insecure"
+
+    config:
+      url: https://argocd.yogstation.net/
+      statusbadge.enabled: "true"
+      dex.config: |
+        connectors:
+          - type: github
+            id: github
+            name: GitHub
+            config:
+              clientID: "6b8ff11daa4808355434"
+              clientSecret: $argocd-secret:dex.github.secret
+              orgs:
+                - name: yogstation13-infrastructure
+              loadAllGroups: true
+              useLoginAsID: false
+      admin.enabled: "false"
