@@ -20,9 +20,15 @@ argo-cd:
     volumes:
       - name: custom-tools
         emptyDir: { }
+      - name: sops-key
+          secret:
+            secretName: sops-key
     volumeMounts:
       - mountPath: /custom-tools
         name: custom-tools
+      - mountPath: /sops-key/
+          name: sops-key
+
     initContainers:
       - name: download-tools
         image: alpine:latest
@@ -76,3 +82,11 @@ argo-cd:
               loadAllGroups: true
               useLoginAsID: false
       admin.enabled: "false"
+      configManagementPlugins: |
+        - name: std-build
+          init:
+            command: ["/bin/sh", "-c"]
+            args: ["helm dependency build"]
+          generate:
+            command: ["/bin/sh", "-c"]
+            args: ["helm template --release-name $ARGOCD_APP_NAME --namespace $ARGOCD_APP_NAMESPACE -f values.yaml -f secrets+age-import:///sops-key/key.txt?secrets.yaml . > kustomization/all.yaml && kustomize build"]
