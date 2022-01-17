@@ -55,6 +55,9 @@ argo-cd:
             name: custom-tools
 
   server:
+    rbacConfig: 
+      policy.default: role:admin
+    
     ingress:
       enabled: true
       annotations:
