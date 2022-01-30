@@ -41,6 +41,10 @@ argo-cd:
             value: "3.7.1"
           - name: KUBECTL_VERSION
             value: "1.22.0"
+          - name: YQ_VERSION
+            value: "4.18.1"
+          - name: JQ_VERSION
+            value: "1.6"
         args:
           - |
             mkdir -p /custom-tools/helm-plugins
@@ -48,7 +52,10 @@ argo-cd:
 
             wget -qO /custom-tools/sops https://github.com/mozilla/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux
             wget -qO /custom-tools/kubectl https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl
-
+            
+            wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64 -O /custom-tools/yq
+            wget https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64 -O /custom-tools/jq
+            
             chmod +x /custom-tools/*
         volumeMounts:
           - mountPath: /custom-tools
@@ -90,7 +97,7 @@ argo-cd:
         - name: std-build
           init:
             command: ["/bin/sh", "-c"]
-            args: ["i=0; for url in $(yq r Chart.yaml dependencies --tojson | jq -r .[].repository); do i=$((i+1)); helm repo add blah${i} ${url}; done && helm dependency build"]
+            args: ["i=0; for url in $(/custom-tools/yq r Chart.yaml dependencies --tojson | /custom-tools/jq -r .[].repository); do i=$((i+1)); helm repo add repository${i} ${url}; done && helm dependency build"]
           generate:
             command: ["/bin/sh", "-c"]
             args: ["helm template --release-name $ARGOCD_APP_NAME --namespace $ARGOCD_APP_NAMESPACE -f values.yaml -f secrets+age-import:///sops-key/key.txt?secrets.yaml . > kustomization/all.yaml && kustomize build"]
