@@ -90,7 +90,7 @@ argo-cd:
         - name: std-build
           init:
             command: ["/bin/sh", "-c"]
-            args: ["helm dependency build"]
+            args: ["i=0; for url in $(yq r Chart.yaml dependencies --tojson | jq -r .[].repository); do i=$((i+1)); helm repo add blah${i} ${url}; done && helm dependency build"]
           generate:
             command: ["/bin/sh", "-c"]
-            args: ["i=0; for url in $(yq r Chart.yaml dependencies --tojson | jq -r .[].repository); do i=$((i+1)); helm repo add blah${i} ${url}; done && helm template --release-name $ARGOCD_APP_NAME --namespace $ARGOCD_APP_NAMESPACE -f values.yaml -f secrets+age-import:///sops-key/key.txt?secrets.yaml . > kustomization/all.yaml && kustomize build"]
+            args: ["helm template --release-name $ARGOCD_APP_NAME --namespace $ARGOCD_APP_NAMESPACE -f values.yaml -f secrets+age-import:///sops-key/key.txt?secrets.yaml . > kustomization/all.yaml && kustomize build"]
