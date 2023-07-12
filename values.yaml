@@ -67,13 +67,7 @@ argo-cd:
     
     ingress:
       enabled: true
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt
       hosts: ["argocd.yogstation.net"]
-      tls:
-        - hosts:
-            - argocd.yogstation.net
-          secretName: argocd-cert
     extraArgs:
       - "--insecure"
 
@@ -100,4 +94,4 @@ argo-cd:
             args: ["i=0; for url in $(cat Chart.yaml | /custom-tools/yq '.dependencies' -o=json | /custom-tools/jq -r .[].repository); do i=$((i+1)); helm repo add repository$ARGOCD_APP_NAME-$ARGOCD_APP_NAMESPACE${i} ${url}; done && helm dependency build"]
           generate:
             command: ["/bin/sh", "-c"]
-            args: ["helm template --validate --release-name $ARGOCD_APP_NAME --namespace $ARGOCD_APP_NAMESPACE -f values.yaml -f secrets+age-import:///sops-key/key.txt?secrets.yaml . > kustomization/inflated.yaml && kustomize build"]
+            args: ["helm template --validate --is-upgrade --release-name $ARGOCD_APP_NAME --namespace $ARGOCD_APP_NAMESPACE -f values.yaml -f secrets+age-import:///sops-key/key.txt?secrets.yaml . > kustomization/inflated.yaml && kustomize build"]
